@@ -7,9 +7,9 @@ from sklearn.metrics import adjusted_rand_score,normalized_mutual_info_score
 
 # Read data
 rcParams["figure.figsize"] = (4, 4)
-rna = anndata.read_h5ad("../data/unmatched_mouse_brain/rna_preprocessed.h5ad")
-atac = anndata.read_h5ad("../data/unmatched_mouse_brain/atac_preprocessed.h5ad")
-met = anndata.read_h5ad("../data/unmatched_mouse_brain/snm_preprocessed.h5ad")
+rna = anndata.read_h5ad("../data/matched_mouse_cortex/rna_preprocessed.h5ad")
+atac = anndata.read_h5ad("../data/matched_mouse_cortex/atac_preprocessed.h5ad")
+
 
 # Configure data
 sccross.models.configure_dataset(
@@ -23,18 +23,13 @@ sccross.models.configure_dataset(
     use_rep="X_lsi"
 )
 
-sccross.models.configure_dataset(
-    met, "NB", use_highly_variable=False,
-    use_rep="X_pca"
-)
-
 # MNN prior
-sccross.data.mnn_prior([rna,atac,met])
+sccross.data.mnn_prior([rna,atac])
 
 
 # Training
 cross = sccross.models.fit_SCCROSS(
-    {"rna": rna, "atac": atac,'snm':met},
+    {"rna": rna, "atac": atac},
     fit_kws={"directory": "sccross"}
 )
 
@@ -44,10 +39,10 @@ cross.save("cross.dill")
 #cross = sccross.models.load_model("cross.dill")
 
 
-# Integration
+# Integration benchmark
 rna.obsm["X_cross"] = cross.encode_data("rna", rna)
 atac.obsm["X_cross"] = cross.encode_data("atac", atac)
-met.obsm["X_cross"] = cross.encode_data("snm", met)
+
 
 combined = anndata.concat([rna, atac])
 
@@ -67,17 +62,21 @@ ARI = adjusted_rand_score(atac.obs['cell_type'], atac.obs['leiden'])
 NMI = normalized_mutual_info_score(atac.obs['cell_type'],atac.obs['leiden'])
 print("ATAC:ARI: "+str(ARI)+"  "+"NMI: "+str(NMI))
 
-ARI = adjusted_rand_score(met.obs['cell_type'], met.obs['leiden'])
-NMI = normalized_mutual_info_score(met.obs['cell_type'],met.obs['leiden'])
-print("snmC:ARI: "+str(ARI)+"  "+"NMI: "+str(NMI))
-
 ASW = sccross.metrics.avg_silhouette_width(combined.obsm['X_cross'],combined.obs['cell_type'])
 ASWb = sccross.metrics.avg_silhouette_width_batch(combined.obsm['X_cross'],combined.obs['domain'],combined.obs['cell_type'])
 GCT = sccross.metrics.graph_connectivity(combined.obsm['X_cross'],combined.obs['cell_type'])
 print("ASW: "+str(ASW)+"ASWb: "+str(ASWb)+"GCT: "+str(GCT))
 
+a1,b1 = sccross.metrics.foscttm(rna.obsm['X_cross'],rna.obsm['X_cross_atac'])
 
-datalist = {'rna':rna,'atac':atac,'met':met}
+for i in [250,500,1000,2000,4000]:
+    if len(a1)>i:
+        foscttm = (a1[0:i-1].mean()+b1[0:i-1].mean())/2
+        print('FOSCTTM'+ str(i)+': '+ str(foscttm))
+
+
+
+datalist = {'rna':rna,'atac':atac}
 
 # Cross generation
 for key1,data1 in datalist.items():
@@ -110,7 +109,6 @@ for key, data in datalist.items():
         sc.pp.neighbors(data_enhanced, use_rep='X_lsi', metric="cosine")
         sc.tl.umap(data_enhanced)
         sc.pl.umap(data_enhanced, color=["cell_type"], save=key + '_enhance' + '.pdf')
-
     else:
         sc.pp.normalize_total(data_enhanced)
         sc.pp.log1p(data_enhanced)
@@ -127,7 +125,7 @@ for key, data in datalist.items():
 # Multi-omics data simulation
 
 fold = [0.5,1,5,10]
-cell_type = list(set(rna.obs['cell_type']) & set(atac.obs['cell_type']) & set(met.obs['cell_type']))
+cell_type = list(set(rna.obs['cell_type']) & set(atac.obs['cell_type']))
 for i in fold:
     for j in cell_type:
         multi_simu = cross.generate_multiSim(datalist,'cell_type',j, int(i*len(rna[rna.obs['cell_type'].isin([j])])))
@@ -143,10 +141,6 @@ for i in fold:
         atac_temp = atac_temp[:, atac_temp.var.query("highly_variable").index]
         atac_temp = sc.concat([atac_temp, multi_simu[1]])
 
-        met_temp = met.copy()
-        met_temp = met_temp[:, met_temp.var.query("highly_variable").index]
-        met_temp = sc.concat([met_temp, multi_simu[2]])
-
         sc.pp.normalize_total(rna_temp)
         sc.pp.log1p(rna_temp)
         sc.pp.scale(rna_temp)
@@ -159,14 +153,6 @@ for i in fold:
         sc.pp.neighbors(atac_temp, use_rep='X_lsi', metric="cosine")
         sc.tl.umap(atac_temp)
         sc.pl.umap(atac_temp, color=["cell_type"], save='ATAC' + j + '_' + str(i) + '.pdf')
-
-        sc.pp.normalize_total(met_temp)
-        sc.pp.log1p(met_temp)
-        sc.pp.scale(met_temp)
-        sc.tl.pca(met_temp, n_comps=100, svd_solver="auto")
-        sc.pp.neighbors(met_temp, metric="cosine")
-        sc.tl.umap(met_temp)
-        sc.pl.umap(met_temp, color=["cell_type"], save='met' + j + '_' + str(i) + '.pdf')
 
 
 

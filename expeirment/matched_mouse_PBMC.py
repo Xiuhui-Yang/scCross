@@ -7,8 +7,8 @@ from sklearn.metrics import adjusted_rand_score,normalized_mutual_info_score
 
 # Read data
 rcParams["figure.figsize"] = (4, 4)
-rna = anndata.read_h5ad("../data/matched_mouse_blood/rna_preprocessed.h5ad")
-atac = anndata.read_h5ad("../data/matched_mouse_blood/atac_preprocessed.h5ad")
+rna = anndata.read_h5ad("../data/matched_mouse_PBMC/rna_preprocessed.h5ad")
+atac = anndata.read_h5ad("../data/matched_mouse_PBMC/atac_preprocessed.h5ad")
 
 
 # Configure data
