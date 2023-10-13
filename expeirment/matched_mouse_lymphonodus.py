@@ -7,8 +7,8 @@ from sklearn.metrics import adjusted_rand_score,normalized_mutual_info_score
 
 # Read data
 rcParams["figure.figsize"] = (4, 4)
-rna = anndata.read_h5ad("../data/matched_mouse_PBMC/rna_preprocessed.h5ad")
-atac = anndata.read_h5ad("../data/matched_mouse_PBMC/atac_preprocessed.h5ad")
+rna = anndata.read_h5ad("../data/matched_mouse_lymphonodus/rna_preprocessed.h5ad")
+atac = anndata.read_h5ad("../data/matched_mouse_lymphonodus/atac_preprocessed.h5ad")
 
 
 # Configure data
@@ -75,6 +75,7 @@ for i in [250,500,1000,2000,4000]:
         foscttm = (a1[0:i-1].mean()+b1[0:i-1].mean())/2
         print('FOSCTTM'+ str(i)+': '+ str(foscttm))
 
+
 datalist = {'rna':rna,'atac':atac}
 
 # Cross generation
@@ -129,29 +130,31 @@ for i in fold:
     for j in cell_type:
         multi_simu = cross.generate_multiSim(datalist,'cell_type',j, int(i*len(rna[rna.obs['cell_type'].isin([j])])))
         for adata in multi_simu:
-            adata.obs['cell_type'] = j+'_s'
+            adata.obs['cell_type'] = j + '_s'
 
         rna_temp = rna.copy()
         rna_temp.X = rna_temp.layers['counts']
-        rna_temp = rna_temp[:,rna_temp.var.query("highly_variable").index]
-        rna_temp = sc.concat([rna_temp,multi_simu[0]])
+        rna_temp = rna_temp[:, rna_temp.var.query("highly_variable").index]
+        rna_temp = sc.concat([rna_temp, multi_simu[0]])
 
         atac_temp = atac.copy()
-        atac_temp = atac_temp[:,atac_temp.var.query("highly_variable").index]
-        atac_temp = sc.concat([atac_temp,multi_simu[1]])
+        atac_temp = atac_temp[:, atac_temp.var.query("highly_variable").index]
+        atac_temp = sc.concat([atac_temp, multi_simu[1]])
 
         sc.pp.normalize_total(rna_temp)
         sc.pp.log1p(rna_temp)
         sc.pp.scale(rna_temp)
         sc.tl.pca(rna_temp, n_comps=100, svd_solver="auto")
-        sc.pp.neighbors(rna_temp,  metric="cosine")
+        sc.pp.neighbors(rna_temp, metric="cosine")
         sc.tl.umap(rna_temp)
-        sc.pl.umap(rna_temp, color=["cell_type"],save='RNA'+j+'_'+str(i)+'.pdf')
+        sc.pl.umap(rna_temp, color=["cell_type"], save='RNA' + j + '_' + str(i) + '.pdf')
 
         sccross.data.lsi(atac_temp, n_components=100, n_iter=15)
-        sc.pp.neighbors(atac_temp, use_rep = 'X_lsi',  metric="cosine")
+        sc.pp.neighbors(atac_temp, use_rep='X_lsi', metric="cosine")
         sc.tl.umap(atac_temp)
-        sc.pl.umap(atac_temp, color=["cell_type"],save='ATAC'+j+'_'+str(i)+'.pdf')
+        sc.pl.umap(atac_temp, color=["cell_type"], save='ATAC' + j + '_' + str(i) + '.pdf')
+
+
 
 
 
