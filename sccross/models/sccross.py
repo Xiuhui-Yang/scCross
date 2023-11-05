@@ -1977,6 +1977,7 @@ class SCCROSSModel(Model):
         for i in range(num):
             z = u2z(z_s_m)
             u1samp = z.rsample()
+            g = 0
 
             for key, adata in adatas.items():
                 z2u = self.net.z2u[key]
