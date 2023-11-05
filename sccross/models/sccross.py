@@ -1925,6 +1925,7 @@ class SCCROSSModel(Model):
 
         l_s = []
         z_s = torch.Tensor().cuda()
+        z_d_s = torch.Tensor().cuda()
 
 
 
@@ -1954,28 +1955,34 @@ class SCCROSSModel(Model):
                     xalt.to(self.net.device, non_blocking=True),
                     lazy_normalizer=True
                 )
+                z = u2z(u.mean)
+
+
+
 
 
                 l = torch.mean(l.cpu())
 
 
-                z_t = torch.mean(u.mean,dim=0,keepdim=True)
+                z_t = torch.mean(z.mean,dim=0,keepdim=True)
+                z_d = torch.mean(z.stddev, dim=0, keepdim=True)
 
                 l_s_t.append(l)
                 z_s = torch.cat((z_s, z_t))
+                z_d_s = torch.cat((z_d_s, z_d))
 
             l_s.append(np.mean(l_s_t))
 
         z_s_m = torch.mean(z_s,dim=0,keepdim=True)
+        z_d_s_m = torch.mean(z_d_s, dim=0, keepdim=True)
 
         g = 0
         result_s = {}
         result_t = []
         for key, adata in adatas.items():
             result_s[key] = torch.Tensor()
-
+        z = D.Normal(z_s_m, z_d_s_m)
         for i in range(num):
-            z = u2z(z_s_m)
             u1samp = z.rsample()
             g = 0
 
