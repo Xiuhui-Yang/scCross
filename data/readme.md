@@ -1,7 +1,10 @@
 # Data processing
 * Matched mouse cortex dataset: GSE126074
-[scRNA-seq](http://download.gao-lab.org/GLUE/dataset/Chen-2019-RNA.h5ad)
-[scATAC-seq](http://download.gao-lab.org/GLUE/dataset/Chen-2019-ATAC.h5ad)
+
+scRNA-seq: [Download Link: ](http://download.gao-lab.org/GLUE/dataset/Chen-2019-RNA.h5ad)
+
+scATAC-seq: [Download Link: ](http://download.gao-lab.org/GLUE/dataset/Chen-2019-ATAC.h5ad)
+
 * Unmatched mouse cortex dataset: 
     * scRNA-seq: http://dropviz.org/
     * scATAC-seq: https://support.10xgenomics.com/single-cell-atac/datasets/1.1.0/atac_v1_adult_brain_fresh_5k
